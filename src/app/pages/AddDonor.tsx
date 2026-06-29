@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -12,13 +13,56 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
 export function AddDonor() {
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [birthday, setBirthday] = useState("");
+  const [donationFrequency, setDonationFrequency] = useState("");
+  const [preferredCommunication, setPreferredCommunication] = useState("");
+  const [interests, setInterests] = useState("");
+  const [skills, setSkills] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
+    if (!isSupabaseConfigured || !supabase) {
+      setError("Supabase is not configured. Check your environment variables.");
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+
+    const { error: insertError } = await supabase.from("donors").insert({
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone: phone || null,
+      country: country || null,
+      city: city || null,
+      birthday: birthday || null,
+      donation_frequency: donationFrequency || null,
+      preferred_communication: preferredCommunication || null,
+      interests: interests || null,
+      skills: skills || null,
+      notes: notes || null,
+    });
+
+    if (insertError) {
+      setError(insertError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
     navigate("/dashboard/donors");
   };
 
@@ -35,6 +79,12 @@ export function AddDonor() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm max-w-3xl">
+          {error}
+        </div>
+      )}
+
       <div className="max-w-3xl">
         <form onSubmit={handleSubmit}>
           <Card className="border-border/50 shadow-sm">
@@ -45,12 +95,14 @@ export function AddDonor() {
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="font-semibold">Basic Information</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name *</Label>
                     <Input
                       id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
                       placeholder="John"
                       className="bg-input-background"
                       required
@@ -60,6 +112,8 @@ export function AddDonor() {
                     <Label htmlFor="lastName">Last Name *</Label>
                     <Input
                       id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                       placeholder="Doe"
                       className="bg-input-background"
                       required
@@ -73,6 +127,8 @@ export function AddDonor() {
                     <Input
                       id="email"
                       type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="john.doe@email.com"
                       className="bg-input-background"
                       required
@@ -83,6 +139,8 @@ export function AddDonor() {
                     <Input
                       id="phone"
                       type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       placeholder="+1 (555) 123-4567"
                       className="bg-input-background"
                     />
@@ -93,22 +151,22 @@ export function AddDonor() {
               {/* Location */}
               <div className="space-y-4">
                 <h3 className="font-semibold">Location</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="country">Country</Label>
-                    <Select>
+                    <Select value={country} onValueChange={setCountry}>
                       <SelectTrigger id="country" className="bg-input-background">
                         <SelectValue placeholder="Select country" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="usa">United States</SelectItem>
-                        <SelectItem value="canada">Canada</SelectItem>
-                        <SelectItem value="uk">United Kingdom</SelectItem>
-                        <SelectItem value="australia">Australia</SelectItem>
-                        <SelectItem value="germany">Germany</SelectItem>
-                        <SelectItem value="france">France</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="USA">United States</SelectItem>
+                        <SelectItem value="Canada">Canada</SelectItem>
+                        <SelectItem value="UK">United Kingdom</SelectItem>
+                        <SelectItem value="Australia">Australia</SelectItem>
+                        <SelectItem value="Germany">Germany</SelectItem>
+                        <SelectItem value="France">France</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -116,6 +174,8 @@ export function AddDonor() {
                     <Label htmlFor="city">City</Label>
                     <Input
                       id="city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
                       placeholder="New York"
                       className="bg-input-background"
                     />
@@ -126,27 +186,29 @@ export function AddDonor() {
               {/* Donor Details */}
               <div className="space-y-4">
                 <h3 className="font-semibold">Donor Details</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="birthday">Birthday</Label>
                     <Input
                       id="birthday"
                       type="date"
+                      value={birthday}
+                      onChange={(e) => setBirthday(e.target.value)}
                       className="bg-input-background"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="donationFrequency">Donation Frequency</Label>
-                    <Select>
+                    <Select value={donationFrequency} onValueChange={setDonationFrequency}>
                       <SelectTrigger id="donationFrequency" className="bg-input-background">
                         <SelectValue placeholder="Select frequency" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="one-time">One-time</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="quarterly">Quarterly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="One-time">One-time</SelectItem>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                        <SelectItem value="Quarterly">Quarterly</SelectItem>
+                        <SelectItem value="Yearly">Yearly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -154,16 +216,16 @@ export function AddDonor() {
 
                 <div className="space-y-2">
                   <Label htmlFor="preferredCommunication">Preferred Communication Method</Label>
-                  <Select>
+                  <Select value={preferredCommunication} onValueChange={setPreferredCommunication}>
                     <SelectTrigger id="preferredCommunication" className="bg-input-background">
                       <SelectValue placeholder="Select method" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="phone">Phone</SelectItem>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="sms">SMS</SelectItem>
-                      <SelectItem value="mail">Mail</SelectItem>
+                      <SelectItem value="Email">Email</SelectItem>
+                      <SelectItem value="Phone">Phone</SelectItem>
+                      <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                      <SelectItem value="SMS">SMS</SelectItem>
+                      <SelectItem value="Mail">Mail</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -172,11 +234,13 @@ export function AddDonor() {
               {/* Interests & Skills */}
               <div className="space-y-4">
                 <h3 className="font-semibold">Interests & Skills</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="interests">Interests</Label>
                   <Input
                     id="interests"
+                    value={interests}
+                    onChange={(e) => setInterests(e.target.value)}
                     placeholder="e.g., Education, Healthcare, Climate Action (comma separated)"
                     className="bg-input-background"
                   />
@@ -189,6 +253,8 @@ export function AddDonor() {
                   <Label htmlFor="skills">Skills</Label>
                   <Input
                     id="skills"
+                    value={skills}
+                    onChange={(e) => setSkills(e.target.value)}
                     placeholder="e.g., Marketing, Accounting, Event Planning (comma separated)"
                     className="bg-input-background"
                   />
@@ -201,11 +267,13 @@ export function AddDonor() {
               {/* Notes */}
               <div className="space-y-4">
                 <h3 className="font-semibold">Additional Information</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea
                     id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     placeholder="Add any additional notes about this donor..."
                     className="bg-input-background min-h-[120px]"
                   />
@@ -216,14 +284,16 @@ export function AddDonor() {
               <div className="flex gap-3 pt-4">
                 <Button
                   type="submit"
+                  disabled={isSubmitting}
                   className="bg-[#6C63FF] hover:bg-[#5A52D5]"
                 >
                   <Save className="w-4 h-4 mr-2" />
-                  Save Donor
+                  {isSubmitting ? "Saving..." : "Save Donor"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={isSubmitting}
                   onClick={() => navigate("/dashboard/donors")}
                 >
                   Cancel

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -27,107 +27,56 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../components/ui/sheet";
-import { Plus, Search, Filter, Mail, Phone, TrendingUp, MessageSquare } from "lucide-react";
+import { Plus, Search, Filter, Mail, Phone, TrendingUp } from "lucide-react";
 import { Separator } from "../components/ui/separator";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
-const donors = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    country: "USA",
-    lastDonation: "2024-06-20",
-    totalDonations: "$2,450",
-    healthScore: 92,
-    engagementScore: 88,
-    status: "Active",
-    phone: "+1 (555) 123-4567",
-    donationHistory: [
-      { date: "2024-06-20", amount: "$500", campaign: "Clean Water Initiative" },
-      { date: "2024-05-15", amount: "$250", campaign: "Education Fund" },
-      { date: "2024-04-10", amount: "$1,700", campaign: "Emergency Relief" },
-    ],
-    communications: [
-      { date: "2024-06-21", type: "Email", subject: "Thank you for your donation" },
-      { date: "2024-06-15", type: "Email", subject: "Monthly Impact Report" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    email: "m.chen@email.com",
-    country: "Canada",
-    lastDonation: "2024-06-18",
-    totalDonations: "$5,200",
-    healthScore: 95,
-    engagementScore: 92,
-    status: "Active",
-    phone: "+1 (555) 987-6543",
-    donationHistory: [
-      { date: "2024-06-18", amount: "$1,000", campaign: "Healthcare Access" },
-      { date: "2024-05-20", amount: "$1,200", campaign: "Education Fund" },
-    ],
-    communications: [
-      { date: "2024-06-19", type: "Email", subject: "Thank you for your donation" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Emma Wilson",
-    email: "emma.w@email.com",
-    country: "UK",
-    lastDonation: "2024-06-15",
-    totalDonations: "$1,800",
-    healthScore: 78,
-    engagementScore: 75,
-    status: "Active",
-    phone: "+44 20 1234 5678",
-    donationHistory: [
-      { date: "2024-06-15", amount: "$300", campaign: "Climate Action" },
-      { date: "2024-05-10", amount: "$500", campaign: "Clean Water Initiative" },
-    ],
-    communications: [],
-  },
-  {
-    id: 4,
-    name: "David Brown",
-    email: "d.brown@email.com",
-    country: "USA",
-    lastDonation: "2024-05-25",
-    totalDonations: "$3,100",
-    healthScore: 65,
-    engagementScore: 60,
-    status: "At Risk",
-    phone: "+1 (555) 456-7890",
-    donationHistory: [
-      { date: "2024-05-25", amount: "$600", campaign: "Emergency Relief" },
-    ],
-    communications: [],
-  },
-  {
-    id: 5,
-    name: "Lisa Anderson",
-    email: "lisa.a@email.com",
-    country: "Australia",
-    lastDonation: "2024-06-22",
-    totalDonations: "$4,700",
-    healthScore: 90,
-    engagementScore: 85,
-    status: "Active",
-    phone: "+61 2 1234 5678",
-    donationHistory: [
-      { date: "2024-06-22", amount: "$800", campaign: "Education Fund" },
-    ],
-    communications: [],
-  },
-];
+interface Donor {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  country: string | null;
+  city: string | null;
+  status: string;
+  health_score: number;
+  engagement_score: number;
+  last_donation_date: string | null;
+  total_donations: number;
+  donation_frequency: string | null;
+  preferred_communication: string | null;
+  interests: string | null;
+  notes: string | null;
+}
 
 export function DonorManagement() {
   const navigate = useNavigate();
-  const [selectedDonor, setSelectedDonor] = useState<typeof donors[0] | null>(null);
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDonor, setSelectedDonor] = useState<Donor | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [countryFilter, setCountryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    fetchDonors();
+  }, []);
+
+  const fetchDonors = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("donors")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) setDonors(data);
+    setLoading(false);
+  };
 
   const getHealthScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
@@ -142,13 +91,18 @@ export function DonorManagement() {
   };
 
   const filteredDonors = donors.filter((donor) => {
+    const fullName = `${donor.first_name} ${donor.last_name}`.toLowerCase();
     const matchesSearch =
-      donor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      searchQuery === "" ||
+      fullName.includes(searchQuery.toLowerCase()) ||
       donor.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCountry = countryFilter === "all" || donor.country === countryFilter;
     const matchesStatus = statusFilter === "all" || donor.status === statusFilter;
     return matchesSearch && matchesCountry && matchesStatus;
   });
+
+  const getInitials = (donor: Donor) =>
+    `${donor.first_name[0] ?? ""}${donor.last_name[0] ?? ""}`.toUpperCase();
 
   return (
     <div className="p-6 space-y-6">
@@ -168,7 +122,6 @@ export function DonorManagement() {
       <Card className="border-border/50 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4">
-            {/* Search */}
             <div className="flex-1 min-w-[300px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -181,7 +134,6 @@ export function DonorManagement() {
               </div>
             </div>
 
-            {/* Country Filter */}
             <Select value={countryFilter} onValueChange={setCountryFilter}>
               <SelectTrigger className="w-[180px] bg-gray-50 border-0">
                 <SelectValue placeholder="Country" />
@@ -195,7 +147,6 @@ export function DonorManagement() {
               </SelectContent>
             </Select>
 
-            {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px] bg-gray-50 border-0">
                 <SelectValue placeholder="Status" />
@@ -219,64 +170,77 @@ export function DonorManagement() {
       {/* Donors Table */}
       <Card className="border-border/50 shadow-sm">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Donor Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Last Donation</TableHead>
-                <TableHead>Total Donations</TableHead>
-                <TableHead>Health Score</TableHead>
-                <TableHead>Engagement</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredDonors.map((donor) => (
-                <TableRow
-                  key={donor.id}
-                  className="cursor-pointer hover:bg-gray-50"
-                  onClick={() => setSelectedDonor(donor)}
-                >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarFallback className="bg-[#6C63FF]/10 text-[#6C63FF]">
-                          {donor.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{donor.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{donor.email}</TableCell>
-                  <TableCell>{donor.country}</TableCell>
-                  <TableCell>{donor.lastDonation}</TableCell>
-                  <TableCell className="font-medium">{donor.totalDonations}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[60px]">
-                        <div
-                          className={`h-2 rounded-full ${getHealthScoreColor(donor.healthScore)} bg-current`}
-                          style={{ width: `${donor.healthScore}%` }}
-                        ></div>
-                      </div>
-                      <span className={`text-sm font-medium ${getHealthScoreColor(donor.healthScore)}`}>
-                        {donor.healthScore}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{donor.engagementScore}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(donor.status)}>{donor.status}</Badge>
-                  </TableCell>
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">Loading donors...</div>
+          ) : filteredDonors.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No donors found.{" "}
+              <button
+                className="text-[#6C63FF] underline"
+                onClick={() => navigate("/dashboard/donors/add")}
+              >
+                Add your first donor
+              </button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Donor Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Last Donation</TableHead>
+                  <TableHead>Total Donations</TableHead>
+                  <TableHead>Health Score</TableHead>
+                  <TableHead>Engagement</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredDonors.map((donor) => (
+                  <TableRow
+                    key={donor.id}
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => setSelectedDonor(donor)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback className="bg-[#6C63FF]/10 text-[#6C63FF]">
+                            {getInitials(donor)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{donor.first_name} {donor.last_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{donor.email}</TableCell>
+                    <TableCell>{donor.country ?? "—"}</TableCell>
+                    <TableCell>{donor.last_donation_date ?? "—"}</TableCell>
+                    <TableCell className="font-medium">
+                      ${donor.total_donations.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[60px]">
+                          <div
+                            className={`h-2 rounded-full ${getHealthScoreColor(donor.health_score)} bg-current`}
+                            style={{ width: `${donor.health_score}%` }}
+                          />
+                        </div>
+                        <span className={`text-sm font-medium ${getHealthScoreColor(donor.health_score)}`}>
+                          {donor.health_score}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{donor.engagement_score}</TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(donor.status)}>{donor.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -289,14 +253,11 @@ export function DonorManagement() {
                 <div className="flex items-center gap-4 mb-4">
                   <Avatar className="w-16 h-16">
                     <AvatarFallback className="bg-[#6C63FF] text-white text-xl">
-                      {selectedDonor.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                      {getInitials(selectedDonor)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <SheetTitle>{selectedDonor.name}</SheetTitle>
+                    <SheetTitle>{selectedDonor.first_name} {selectedDonor.last_name}</SheetTitle>
                     <SheetDescription>{selectedDonor.email}</SheetDescription>
                   </div>
                 </div>
@@ -323,17 +284,35 @@ export function DonorManagement() {
                       <span className="text-muted-foreground">Email:</span>
                       <span>{selectedDonor.email}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Phone:</span>
-                      <span>{selectedDonor.phone}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Country:</span>
-                      <span>{selectedDonor.country}</span>
-                    </div>
+                    {selectedDonor.phone && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Phone:</span>
+                        <span>{selectedDonor.phone}</span>
+                      </div>
+                    )}
+                    {selectedDonor.country && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Country:</span>
+                        <span>{selectedDonor.country}</span>
+                      </div>
+                    )}
+                    {selectedDonor.donation_frequency && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Donation Frequency:</span>
+                        <span>{selectedDonor.donation_frequency}</span>
+                      </div>
+                    )}
+                    {selectedDonor.preferred_communication && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Preferred Contact:</span>
+                        <span>{selectedDonor.preferred_communication}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Status:</span>
-                      <Badge className={getStatusColor(selectedDonor.status)}>{selectedDonor.status}</Badge>
+                      <Badge className={getStatusColor(selectedDonor.status)}>
+                        {selectedDonor.status}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -347,29 +326,27 @@ export function DonorManagement() {
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>Health Score</span>
-                        <span className={`font-medium ${getHealthScoreColor(selectedDonor.healthScore)}`}>
-                          {selectedDonor.healthScore}/100
+                        <span className={`font-medium ${getHealthScoreColor(selectedDonor.health_score)}`}>
+                          {selectedDonor.health_score}/100
                         </span>
                       </div>
                       <div className="bg-gray-200 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full ${getHealthScoreColor(
-                            selectedDonor.healthScore
-                          )} bg-current`}
-                          style={{ width: `${selectedDonor.healthScore}%` }}
-                        ></div>
+                          className={`h-2 rounded-full ${getHealthScoreColor(selectedDonor.health_score)} bg-current`}
+                          style={{ width: `${selectedDonor.health_score}%` }}
+                        />
                       </div>
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span>Engagement Score</span>
-                        <span className="font-medium">{selectedDonor.engagementScore}/100</span>
+                        <span className="font-medium">{selectedDonor.engagement_score}/100</span>
                       </div>
                       <div className="bg-gray-200 rounded-full h-2">
                         <div
                           className="h-2 rounded-full bg-[#4F8CFF]"
-                          style={{ width: `${selectedDonor.engagementScore}%` }}
-                        ></div>
+                          style={{ width: `${selectedDonor.engagement_score}%` }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -377,46 +354,42 @@ export function DonorManagement() {
 
                 <Separator />
 
-                {/* Donation History */}
+                {/* Donation Summary */}
                 <div>
-                  <h3 className="font-semibold mb-3">Donation History</h3>
-                  <div className="space-y-3">
-                    {selectedDonor.donationHistory.map((donation, idx) => (
-                      <div key={idx} className="border-l-2 border-[#6C63FF] pl-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium">{donation.amount}</span>
-                          <span className="text-xs text-muted-foreground">{donation.date}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{donation.campaign}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm font-medium mt-3">Total: {selectedDonor.totalDonations}</p>
-                </div>
-
-                <Separator />
-
-                {/* Communication Timeline */}
-                <div>
-                  <h3 className="font-semibold mb-3">Communication Timeline</h3>
-                  {selectedDonor.communications.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedDonor.communications.map((comm, idx) => (
-                        <div key={idx} className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#4F8CFF]/10 flex items-center justify-center flex-shrink-0">
-                            <MessageSquare className="w-4 h-4 text-[#4F8CFF]" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{comm.subject}</p>
-                            <p className="text-xs text-muted-foreground">{comm.type} · {comm.date}</p>
-                          </div>
-                        </div>
-                      ))}
+                  <h3 className="font-semibold mb-3">Donation Summary</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Donated:</span>
+                      <span className="font-medium">${selectedDonor.total_donations.toLocaleString()}</span>
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No recent communications</p>
-                  )}
+                    {selectedDonor.last_donation_date && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Donation:</span>
+                        <span>{selectedDonor.last_donation_date}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {selectedDonor.interests && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="font-semibold mb-2">Interests</h3>
+                      <p className="text-sm text-muted-foreground">{selectedDonor.interests}</p>
+                    </div>
+                  </>
+                )}
+
+                {selectedDonor.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="font-semibold mb-2">Notes</h3>
+                      <p className="text-sm text-muted-foreground">{selectedDonor.notes}</p>
+                    </div>
+                  </>
+                )}
 
                 <Separator />
 
@@ -434,7 +407,7 @@ export function DonorManagement() {
                     </div>
                     <div className="bg-[#4F8CFF]/5 rounded-lg p-3">
                       <p className="text-sm">
-                        Share impact stories about education programs - this donor has shown 78% higher engagement with this topic.
+                        Share impact stories about education programs — this donor has shown higher engagement with this topic.
                       </p>
                     </div>
                   </div>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -11,72 +12,57 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Plus, Search, Filter, FileText, MapPin, Calendar } from "lucide-react";
+import { supabase, isSupabaseConfigured } from "../lib/supabase";
 
-const stories = [
-  {
-    id: 1,
-    title: "Clean Water Transforms Village",
-    program: "Clean Water Initiative",
-    location: "Rural Kenya",
-    date: "2024-06-15",
-    status: "Published",
-    image: "https://images.unsplash.com/photo-1541692641319-981cc79ee10a?w=800&auto=format&fit=crop",
-    excerpt: "Thanks to donor support, 500 families now have access to clean water...",
-  },
-  {
-    id: 2,
-    title: "Student Achieves Dream of Education",
-    program: "Education Fund",
-    location: "Manila, Philippines",
-    date: "2024-06-10",
-    status: "Published",
-    image: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&auto=format&fit=crop",
-    excerpt: "Maria's journey from struggling student to university graduate...",
-  },
-  {
-    id: 3,
-    title: "Community Health Center Opens",
-    program: "Healthcare Access",
-    location: "Mumbai, India",
-    date: "2024-06-05",
-    status: "Published",
-    image: "https://images.unsplash.com/photo-1584515933487-779824d29309?w=800&auto=format&fit=crop",
-    excerpt: "A new health center serves 2,000 families in underserved areas...",
-  },
-  {
-    id: 4,
-    title: "Forest Restoration Success",
-    program: "Climate Action",
-    location: "Amazon Basin, Brazil",
-    date: "2024-06-01",
-    status: "Draft",
-    image: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop",
-    excerpt: "10,000 trees planted, restoring critical habitat...",
-  },
-  {
-    id: 5,
-    title: "Emergency Relief Reaches Families",
-    program: "Emergency Relief",
-    location: "Syrian Border",
-    date: "2024-05-28",
-    status: "Published",
-    image: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800&auto=format&fit=crop",
-    excerpt: "Critical supplies delivered to 1,500 displaced families...",
-  },
-  {
-    id: 6,
-    title: "Women's Empowerment Program Launches",
-    program: "Economic Development",
-    location: "Nairobi, Kenya",
-    date: "2024-05-20",
-    status: "Published",
-    image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=800&auto=format&fit=crop",
-    excerpt: "50 women receive entrepreneurship training and microloans...",
-  },
-];
+interface ImpactStory {
+  id: string;
+  title: string;
+  program: string;
+  location: string;
+  date: string;
+  status: string;
+  image_url: string | null;
+  description: string;
+}
 
 export function ImpactStories() {
   const navigate = useNavigate();
+  const [stories, setStories] = useState<ImpactStory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [programFilter, setProgramFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  useEffect(() => {
+    fetchStories();
+  }, []);
+
+  const fetchStories = async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("impact_stories")
+      .select("id, title, program, location, date, status, image_url, description")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) setStories(data);
+    setLoading(false);
+  };
+
+  const filtered = stories.filter((s) => {
+    const matchSearch =
+      search === "" ||
+      s.title.toLowerCase().includes(search.toLowerCase()) ||
+      s.description.toLowerCase().includes(search.toLowerCase());
+    const matchProgram =
+      programFilter === "all" || s.program.toLowerCase().includes(programFilter.toLowerCase());
+    const matchStatus =
+      statusFilter === "all" || s.status.toLowerCase() === statusFilter.toLowerCase();
+    return matchSearch && matchProgram && matchStatus;
+  });
 
   const getStatusColor = (status: string) => {
     if (status === "Published") return "bg-green-100 text-green-800";
@@ -108,19 +94,19 @@ export function ImpactStories() {
       <Card className="border-border/50 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4">
-            {/* Search */}
             <div className="flex-1 min-w-[300px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search stories..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 bg-gray-50 border-0"
                 />
               </div>
             </div>
 
-            {/* Program Filter */}
-            <Select defaultValue="all">
+            <Select value={programFilter} onValueChange={setProgramFilter}>
               <SelectTrigger className="w-[180px] bg-gray-50 border-0">
                 <SelectValue placeholder="Program" />
               </SelectTrigger>
@@ -133,8 +119,7 @@ export function ImpactStories() {
               </SelectContent>
             </Select>
 
-            {/* Status Filter */}
-            <Select defaultValue="all">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px] bg-gray-50 border-0">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -153,57 +138,68 @@ export function ImpactStories() {
         </CardContent>
       </Card>
 
-      {/* Stories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stories.map((story) => (
-          <Card
-            key={story.id}
-            className="border-border/50 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
-          >
-            <div className="aspect-[16/10] overflow-hidden bg-gray-100">
-              <img
-                src={story.image}
-                alt={story.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <Badge className={getStatusColor(story.status)}>{story.status}</Badge>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
-                  <FileText className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              <h3 className="font-semibold mb-2 line-clamp-2">{story.title}</h3>
-              
-              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                {story.excerpt}
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full bg-[#6C63FF]"></div>
-                  <span>{story.program}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  <span>{story.location}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="w-3 h-3" />
-                  <span>{story.date}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Loading */}
+      {loading && (
+        <div className="text-center py-12 text-muted-foreground">Loading stories...</div>
+      )}
 
-      {/* Empty State (hidden when stories exist) */}
-      {stories.length === 0 && (
+      {/* Stories Grid */}
+      {!loading && filtered.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((story) => (
+            <Card
+              key={story.id}
+              className="border-border/50 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
+            >
+              <div className="aspect-[16/10] overflow-hidden bg-gray-100">
+                {story.image_url ? (
+                  <img
+                    src={story.image_url}
+                    alt={story.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <FileText className="w-12 h-12" />
+                  </div>
+                )}
+              </div>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <Badge className={getStatusColor(story.status)}>{story.status}</Badge>
+                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <h3 className="font-semibold mb-2 line-clamp-2">{story.title}</h3>
+
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                  {story.description}
+                </p>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="w-2 h-2 rounded-full bg-[#6C63FF]"></div>
+                    <span>{story.program}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="w-3 h-3" />
+                    <span>{story.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="w-3 h-3" />
+                    <span>{story.date}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && filtered.length === 0 && (
         <Card className="border-border/50 shadow-sm">
           <CardContent className="p-12">
             <div className="text-center">

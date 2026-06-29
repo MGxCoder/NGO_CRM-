@@ -301,3 +301,93 @@ values
     'Email'
   )
 on conflict do nothing;
+
+-- Donors
+create table if not exists public.donors (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id text not null default 'default' references public.tenants(id),
+  first_name text not null,
+  last_name text not null,
+  email text not null,
+  phone text,
+  country text,
+  city text,
+  birthday date,
+  donation_frequency text,
+  preferred_communication text,
+  interests text,
+  skills text,
+  notes text,
+  status text not null default 'Active',
+  health_score integer not null default 75,
+  engagement_score integer not null default 70,
+  last_donation_date date,
+  total_donations numeric not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table public.donors enable row level security;
+
+drop policy if exists "donors are readable" on public.donors;
+drop policy if exists "donors are insertable" on public.donors;
+drop policy if exists "donors are updatable" on public.donors;
+drop policy if exists "donors are deletable" on public.donors;
+
+create policy "donors are readable" on public.donors
+  for select to anon, authenticated using (true);
+create policy "donors are insertable" on public.donors
+  for insert to anon, authenticated with check (true);
+create policy "donors are updatable" on public.donors
+  for update to anon, authenticated using (true) with check (true);
+create policy "donors are deletable" on public.donors
+  for delete to anon, authenticated using (true);
+
+-- Impact Stories
+insert into storage.buckets (id, name, public)
+values ('impact-stories', 'impact-stories', true)
+on conflict (id) do nothing;
+
+create table if not exists public.impact_stories (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id text not null default 'default' references public.tenants(id),
+  title text not null,
+  description text not null,
+  program text not null,
+  beneficiaries integer,
+  location text not null,
+  date date not null,
+  status text not null default 'Draft',
+  image_url text,
+  metric1 text,
+  metric2 text,
+  metric3 text,
+  total_cost numeric,
+  testimonial_name text,
+  testimonial_quote text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.impact_stories enable row level security;
+
+drop policy if exists "impact stories are readable" on public.impact_stories;
+drop policy if exists "impact stories are insertable" on public.impact_stories;
+drop policy if exists "impact stories are updatable" on public.impact_stories;
+drop policy if exists "impact stories are deletable" on public.impact_stories;
+
+create policy "impact stories are readable" on public.impact_stories
+  for select to anon, authenticated using (true);
+create policy "impact stories are insertable" on public.impact_stories
+  for insert to anon, authenticated with check (true);
+create policy "impact stories are updatable" on public.impact_stories
+  for update to anon, authenticated using (true) with check (true);
+create policy "impact stories are deletable" on public.impact_stories
+  for delete to anon, authenticated using (true);
+
+-- Storage policies for impact-stories bucket
+drop policy if exists "impact story images are publicly readable" on storage.objects;
+drop policy if exists "impact story images are uploadable" on storage.objects;
+
+create policy "impact story images are publicly readable" on storage.objects
+  for select to anon, authenticated using (bucket_id = 'impact-stories');
+create policy "impact story images are uploadable" on storage.objects
+  for insert to anon, authenticated with check (bucket_id = 'impact-stories');
