@@ -1,0 +1,14 @@
+[functions]
+# JWT verification setting - applies to all functions unless overridden
+
+# Set to true for functions that require valid JWT (auth: "user")
+# Functions: campaigns.ts, donors.ts
+verify_jwt = true
+
+# For admin functions with secret key auth (auth: "secret"), 
+# create a separate entry with verify_jwt = false
+# Functions: admin.ts
+
+# For public functions (auth: "none"), can use either setting
+# Functions: public.ts
+
