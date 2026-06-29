@@ -14,9 +14,11 @@ import {
 } from "../components/ui/select";
 import { ArrowLeft, Save, Upload, Image as ImageIcon, Sparkles, X } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { useTenantId } from "../lib/useTenant";
 
 export function AddImpactStory() {
   const navigate = useNavigate();
+  const tenantId = useTenantId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState("");
@@ -78,6 +80,7 @@ export function AddImpactStory() {
       }
 
       const { error: insertError } = await supabase.from("impact_stories").insert({
+        tenant_id: tenantId,
         title,
         description,
         program,

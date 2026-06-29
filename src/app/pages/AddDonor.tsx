@@ -14,9 +14,11 @@ import {
 } from "../components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { useTenantId } from "../lib/useTenant";
 
 export function AddDonor() {
   const navigate = useNavigate();
+  const tenantId = useTenantId();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -43,6 +45,7 @@ export function AddDonor() {
     setError(null);
 
     const { error: insertError } = await supabase.from("donors").insert({
+      tenant_id: tenantId,
       first_name: firstName,
       last_name: lastName,
       email,

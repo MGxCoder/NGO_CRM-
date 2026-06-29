@@ -42,11 +42,15 @@ export function SignupPage() {
     }
 
     setIsSubmitting(true);
+    // Generate a stable tenant UUID for this organisation at signup time.
+    // This is stored in the user's JWT and used by every RLS policy.
+    const tenantId = crypto.randomUUID();
     const { error, needsConfirmation } = await signUp(email, password, {
       first_name: firstName,
       last_name: lastName,
       org_name: orgName,
       org_type: orgType,
+      tenant_id: tenantId,
     });
     setIsSubmitting(false);
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTenantId } from "../lib/useTenant";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -200,11 +201,6 @@ const galleryImages = [
   "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=700&q=80",
 ];
 
-const tenants = [
-  { id: "default", name: "Cre8Gre8 Global" },
-  { id: "north-region", name: "Cre8Gre8 North Region" },
-  { id: "south-region", name: "Cre8Gre8 South Region" },
-];
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
@@ -246,9 +242,8 @@ const statusClass = (status: CampaignStatus) => {
 
 export function CampaignManagement() {
   const initialTab = new URLSearchParams(window.location.search).get("tab") || "overview";
-  const initialTenant = localStorage.getItem("cre8gre8:tenant-id") || "default";
+  const tenantId = useTenantId();
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [tenantId, setTenantId] = useState(initialTenant);
   const [campaigns, setCampaigns] = useState<Campaign[]>(fallbackCampaigns);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign>(fallbackCampaigns[0]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -261,11 +256,11 @@ export function CampaignManagement() {
   const [emailCopy, setEmailCopy] = useState("Dear supporter,\n\nYour generosity creates measurable impact. Here is what your support made possible this month...");
 
   useEffect(() => {
-    localStorage.setItem("cre8gre8:tenant-id", tenantId);
-    void loadCampaigns(tenantId);
+    void loadCampaigns();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
-  const loadCampaigns = async (activeTenant = tenantId) => {
+  const loadCampaigns = async () => {
     if (!supabase) {
       toast.info("Supabase is not configured. Using demo fundraising data.");
       return;
@@ -273,10 +268,10 @@ export function CampaignManagement() {
 
     setIsLoading(true);
     try {
+      // RLS on the server enforces tenant isolation — no client-side tenant filter needed.
       const { data, error } = await supabase
         .from("campaigns")
         .select("*")
-        .eq("tenant_id", activeTenant)
         .order("created_at", { ascending: false });
       
       if (error) {
@@ -297,10 +292,11 @@ export function CampaignManagement() {
       const withCounts = await Promise.all(
         (data || []).map(async (campaign: DbCampaign) => {
           try {
+            // RLS already filters by tenant — no explicit tenant_id needed.
             const [registrations, donations, volunteers] = await Promise.all([
-              supabase.from("campaign_registrations").select("id", { count: "exact", head: true }).eq("tenant_id", activeTenant).eq("campaign_id", campaign.id),
-              supabase.from("campaign_donations").select("id", { count: "exact", head: true }).eq("tenant_id", activeTenant).eq("campaign_id", campaign.id),
-              supabase.from("campaign_volunteers").select("id", { count: "exact", head: true }).eq("tenant_id", activeTenant).eq("campaign_id", campaign.id),
+              supabase.from("campaign_registrations").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id),
+              supabase.from("campaign_donations").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id),
+              supabase.from("campaign_volunteers").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id),
             ]);
             return mapCampaign(campaign, {
               registrations: registrations.count || 0,
@@ -610,16 +606,6 @@ export function CampaignManagement() {
           <p className="text-muted-foreground">Annual appeals, monthly giving, crowdfunding, events, major gifts, volunteers, and direct mail.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select value={tenantId} onValueChange={setTenantId}>
-            <SelectTrigger className="w-[230px] bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {tenants.map((tenant) => (
-                <SelectItem key={tenant.id} value={tenant.id}>{tenant.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Button variant="outline" onClick={() => loadCampaigns()} disabled={isLoading}>
             <Search className="w-4 h-4 mr-2" />
             Refresh
@@ -634,16 +620,10 @@ export function CampaignManagement() {
       {!isSupabaseConfigured && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="p-4 text-sm text-yellow-900">
-            Add Supabase values in `.env.local`, then run `supabase.schema.sql`. Until then, actions update demo state locally.
+            Add Supabase env vars in <code>.env.local</code> and run <code>supabase.schema.sql</code>. Until then, actions update demo state only.
           </CardContent>
         </Card>
       )}
-
-      <Card className="border-border/50 shadow-sm">
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          Tenant scope: <span className="font-medium text-foreground">{tenants.find((tenant) => tenant.id === tenantId)?.name}</span>. Campaigns, donations, registrations, volunteers, direct mail, and gift records are filtered by `tenant_id`.
-        </CardContent>
-      </Card>
 
       <Tabs value={activeTab} onValueChange={setTab} className="space-y-6">
         <TabsList className="flex-wrap h-auto justify-start">

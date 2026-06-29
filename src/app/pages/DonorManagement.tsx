@@ -30,6 +30,7 @@ import {
 import { Plus, Search, Filter, Mail, Phone, TrendingUp } from "lucide-react";
 import { Separator } from "../components/ui/separator";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { useTenantId } from "../lib/useTenant";
 
 interface Donor {
   id: string;
@@ -52,6 +53,7 @@ interface Donor {
 
 export function DonorManagement() {
   const navigate = useNavigate();
+  const tenantId = useTenantId();
   const [donors, setDonors] = useState<Donor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDonor, setSelectedDonor] = useState<Donor | null>(null);
@@ -60,8 +62,9 @@ export function DonorManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    fetchDonors();
-  }, []);
+    if (tenantId) fetchDonors();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
 
   const fetchDonors = async () => {
     if (!isSupabaseConfigured || !supabase) {

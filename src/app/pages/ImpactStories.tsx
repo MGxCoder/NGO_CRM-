@@ -13,6 +13,7 @@ import {
 } from "../components/ui/select";
 import { Plus, Search, Filter, FileText, MapPin, Calendar } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
+import { useTenantId } from "../lib/useTenant";
 
 interface ImpactStory {
   id: string;
@@ -27,6 +28,7 @@ interface ImpactStory {
 
 export function ImpactStories() {
   const navigate = useNavigate();
+  const tenantId = useTenantId();
   const [stories, setStories] = useState<ImpactStory[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -34,8 +36,9 @@ export function ImpactStories() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    fetchStories();
-  }, []);
+    if (tenantId) fetchStories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId]);
 
   const fetchStories = async () => {
     if (!isSupabaseConfigured || !supabase) {
