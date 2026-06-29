@@ -149,6 +149,7 @@ export function ImpactStories() {
           {filtered.map((story) => (
             <Card
               key={story.id}
+              onClick={() => navigate(`/dashboard/impact-stories/${story.id}`)}
               className="border-border/50 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
             >
               <div className="aspect-[16/10] overflow-hidden bg-gray-100">

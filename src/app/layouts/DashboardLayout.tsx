@@ -31,6 +31,7 @@ import {
   LogOut,
   Loader2,
   User,
+  Mail,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 
@@ -41,6 +42,7 @@ const navigation = [
   { name: "Reports", path: "/dashboard/reports", icon: FileText },
   { name: "Engagement", path: "/dashboard/engagement", icon: MessageSquare },
   { name: "Campaigns", path: "/dashboard/campaigns", icon: Megaphone },
+  { name: "Email Templates", path: "/dashboard/email-templates", icon: Mail },
   { name: "AI Assistant", path: "/dashboard/ai-assistant", icon: Bot },
   { name: "Analytics", path: "/dashboard/analytics", icon: BarChart3 },
   { name: "Settings", path: "/dashboard/settings", icon: Settings },

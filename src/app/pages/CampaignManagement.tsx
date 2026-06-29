@@ -553,14 +553,22 @@ export function CampaignManagement() {
     });
   };
 
+  const getLandingPageUrl = (campaign: Campaign) =>
+    `${window.location.origin}/campaign/${campaign.id}`;
+
   const shareCampaign = async () => {
+    const url = getLandingPageUrl(selectedCampaign);
     const text = `${selectedCampaign.name}: ${selectedCampaign.description}`;
     if (navigator.share) {
-      await navigator.share({ title: selectedCampaign.name, text, url: window.location.href });
+      await navigator.share({ title: selectedCampaign.name, text, url });
     } else {
-      await navigator.clipboard.writeText(`${text} ${window.location.href}`);
-      toast.success("Campaign link copied.");
+      await navigator.clipboard.writeText(url);
+      toast.success("Landing page link copied to clipboard.");
     }
+  };
+
+  const openLandingPage = (campaign: Campaign) => {
+    window.open(getLandingPageUrl(campaign), "_blank");
   };
 
   const exportReport = () => {
@@ -698,7 +706,7 @@ export function CampaignManagement() {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-4">
               {filteredCampaigns.map((campaign) => (
-                <CampaignCard key={campaign.id} campaign={campaign} selected={campaign.id === selectedCampaign.id} onSelect={() => setSelectedCampaign(campaign)} onPreview={() => setTab(campaign.type === "Fundraising Event" ? "events" : "crowdfunding")} />
+                <CampaignCard key={campaign.id} campaign={campaign} selected={campaign.id === selectedCampaign.id} onSelect={() => setSelectedCampaign(campaign)} onPreview={() => setTab(campaign.type === "Fundraising Event" ? "events" : "crowdfunding")} onLandingPage={() => openLandingPage(campaign)} />
               ))}
             </div>
             <SelectedCampaignPanel campaign={selectedCampaign} progress={selectedProgress} />
@@ -1011,7 +1019,7 @@ function CampaignForm({ title = "Create Campaign", forcedType, onSubmit }: { tit
   );
 }
 
-function CampaignCard({ campaign, selected, onSelect, onPreview }: { campaign: Campaign; selected: boolean; onSelect: () => void; onPreview: () => void }) {
+function CampaignCard({ campaign, selected, onSelect, onPreview, onLandingPage }: { campaign: Campaign; selected: boolean; onSelect: () => void; onPreview: () => void; onLandingPage?: () => void }) {
   const progress = Math.min(100, Math.round((campaign.raised / Math.max(campaign.goal, 1)) * 100));
   return (
     <Card className={`border-border/50 shadow-sm cursor-pointer transition-shadow hover:shadow-md ${selected ? "ring-2 ring-[#6C63FF]/30" : ""}`} onClick={onSelect}>
@@ -1027,7 +1035,14 @@ function CampaignCard({ campaign, selected, onSelect, onPreview }: { campaign: C
                 </div>
                 <p className="text-sm text-muted-foreground">{campaign.type} by {campaign.organizer}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onPreview(); }}><Eye className="w-4 h-4 mr-2" />Open</Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onPreview(); }}><Eye className="w-4 h-4 mr-2" />Open</Button>
+                {onLandingPage && (
+                  <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onLandingPage(); }}>
+                    <Share2 className="w-4 h-4 mr-2" />Landing Page
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <div className="flex items-center justify-between text-sm mb-2">
