@@ -3,6 +3,17 @@ import type { ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 
+// Creates the tenants row if it doesn't exist yet.
+// Safe to call on every login/session restore — uses upsert with ignoreDuplicates.
+async function ensureTenantRow(user: User) {
+  if (!supabase) return;
+  const tenantId = (user.user_metadata?.tenant_id as string | undefined) || user.id;
+  const orgName = (user.user_metadata?.org_name as string | undefined) || "My Organization";
+  await supabase
+    .from("tenants")
+    .upsert({ id: tenantId, name: orgName }, { onConflict: "id", ignoreDuplicates: true });
+}
+
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -26,15 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) await ensureTenantRow(session.user);
       setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      // Fire-and-forget on subsequent auth events — tenant row already exists after getSession
+      if (session?.user) void ensureTenantRow(session.user);
       setIsLoading(false);
     });
 

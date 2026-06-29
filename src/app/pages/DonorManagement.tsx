@@ -62,7 +62,7 @@ export function DonorManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    if (tenantId) fetchDonors();
+    fetchDonors();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 

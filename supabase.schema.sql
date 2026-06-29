@@ -9,13 +9,19 @@ create table if not exists public.tenants (
 );
 
 -- ─── Helper: extract tenant_id from the authenticated user's JWT ──────────────
--- Called by all RLS policies – returns '' for anon (no JWT).
+-- Prefers the tenant_id set at signup. Falls back to auth.uid() so that users
+-- who signed up before tenant_id was added can still access their own data.
+-- Returns '' for anon requests (no JWT).
 create or replace function public.auth_tenant_id()
 returns text
 language sql
 stable
 as $$
-  select coalesce(auth.jwt() -> 'user_metadata' ->> 'tenant_id', '')
+  select coalesce(
+    nullif(auth.jwt() -> 'user_metadata' ->> 'tenant_id', ''),
+    auth.uid()::text,
+    ''
+  )
 $$;
 
 -- ─── Trigger: auto-create tenant row when a user signs up ────────────────────
@@ -244,6 +250,11 @@ end $$;
 create policy "tenants: own org read" on public.tenants
   for select to authenticated
   using (id = public.auth_tenant_id());
+
+-- Allow each user to create their own tenant row on first login.
+create policy "tenants: own org insert" on public.tenants
+  for insert to authenticated
+  with check (id = public.auth_tenant_id());
 
 -- ─── CAMPAIGNS ───────────────────────────────────────────────────────────────
 -- Anon can read any campaign (needed for public /campaign/:id landing pages).

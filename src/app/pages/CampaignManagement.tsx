@@ -265,6 +265,8 @@ export function CampaignManagement() {
       toast.info("Supabase is not configured. Using demo fundraising data.");
       return;
     }
+    // Wait for auth to settle — tenantId is empty before the JWT is ready
+    if (!tenantId) return;
 
     setIsLoading(true);
     try {

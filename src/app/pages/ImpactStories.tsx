@@ -36,7 +36,7 @@ export function ImpactStories() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    if (tenantId) fetchStories();
+    fetchStories();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
