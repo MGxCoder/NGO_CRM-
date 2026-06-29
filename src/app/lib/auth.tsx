@@ -9,9 +9,10 @@ async function ensureTenantRow(user: User) {
   if (!supabase) return;
   const tenantId = (user.user_metadata?.tenant_id as string | undefined) || user.id;
   const orgName = (user.user_metadata?.org_name as string | undefined) || "My Organization";
-  await supabase
+  const { error } = await supabase
     .from("tenants")
     .upsert({ id: tenantId, name: orgName }, { onConflict: "id", ignoreDuplicates: true });
+  if (error) console.warn("ensureTenantRow failed:", error.message);
 }
 
 type AuthContextType = {

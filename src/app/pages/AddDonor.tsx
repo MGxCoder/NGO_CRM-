@@ -14,11 +14,9 @@ import {
 } from "../components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "../lib/supabase";
-import { useTenantId } from "../lib/useTenant";
 
 export function AddDonor() {
   const navigate = useNavigate();
-  const tenantId = useTenantId();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -44,8 +42,31 @@ export function AddDonor() {
     setIsSubmitting(true);
     setError(null);
 
+    // Get a fresh session so the tenant_id we use matches what's in the JWT
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      setError("Session expired. Please sign in again.");
+      setIsSubmitting(false);
+      return;
+    }
+    const freshUser = session.user;
+    const resolvedTenantId =
+      (freshUser.user_metadata?.tenant_id as string | undefined) || freshUser.id;
+
+    // Ensure the tenant row exists — FK on donors references tenants(id) and
+    // a missing row causes PostgREST to surface an RLS violation instead of FK error.
+    await supabase
+      .from("tenants")
+      .upsert(
+        {
+          id: resolvedTenantId,
+          name: (freshUser.user_metadata?.org_name as string | undefined) || "My Organization",
+        },
+        { onConflict: "id", ignoreDuplicates: true },
+      );
+
     const { error: insertError } = await supabase.from("donors").insert({
-      tenant_id: tenantId,
+      tenant_id: resolvedTenantId,
       first_name: firstName,
       last_name: lastName,
       email,
