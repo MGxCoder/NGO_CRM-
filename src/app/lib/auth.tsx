@@ -8,7 +8,8 @@ type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, metadata?: Record<string, string>) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, metadata?: Record<string, string>) => Promise<{ error: string | null; needsConfirmation?: boolean }>;
+  resendConfirmation: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -50,13 +51,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     metadata?: Record<string, string>,
-  ): Promise<{ error: string | null }> => {
+  ): Promise<{ error: string | null; needsConfirmation?: boolean }> => {
     if (!supabase) return { error: "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env.local." };
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: metadata },
     });
+    if (error) return { error: error.message };
+    // When email confirmation is required, signUp succeeds but returns no session
+    const needsConfirmation = !!data.user && !data.session;
+    return { error: null, needsConfirmation };
+  };
+
+  const resendConfirmation = async (email: string): Promise<{ error: string | null }> => {
+    if (!supabase) return { error: "Supabase is not configured." };
+    const { error } = await supabase.auth.resend({ type: "signup", email });
     return { error: error?.message ?? null };
   };
 
@@ -67,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, resendConfirmation, signOut }}>
       {children}
     </AuthContext.Provider>
   );

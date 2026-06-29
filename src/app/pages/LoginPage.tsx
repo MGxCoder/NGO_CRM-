@@ -10,8 +10,9 @@ import { useAuth } from "../lib/auth";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, resendConfirmation } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -19,16 +20,31 @@ export function LoginPage() {
     const email = form.get("email") as string;
     const password = form.get("password") as string;
 
+    setUnconfirmedEmail(null);
     setIsSubmitting(true);
     const { error } = await signIn(email, password);
     setIsSubmitting(false);
 
     if (error) {
+      if (error.toLowerCase().includes("email not confirmed")) {
+        setUnconfirmedEmail(email);
+        return;
+      }
       toast.error("Sign in failed", { description: error });
       return;
     }
 
     navigate("/dashboard", { replace: true });
+  };
+
+  const handleResend = async () => {
+    if (!unconfirmedEmail) return;
+    const { error } = await resendConfirmation(unconfirmedEmail);
+    if (error) {
+      toast.error("Could not resend email", { description: error });
+    } else {
+      toast.success("Confirmation email sent — check your inbox.");
+    }
   };
 
   return (
@@ -102,6 +118,19 @@ export function LoginPage() {
                     "Sign In"
                   )}
                 </Button>
+                {unconfirmedEmail && (
+                  <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Email not confirmed</p>
+                    <p className="text-yellow-700 mb-2">Check your inbox for a confirmation link.</p>
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      className="text-[#6C63FF] hover:underline font-medium"
+                    >
+                      Resend confirmation email
+                    </button>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>

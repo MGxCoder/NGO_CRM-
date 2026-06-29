@@ -17,8 +17,9 @@ import { useAuth } from "../lib/auth";
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, resendConfirmation } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -41,7 +42,7 @@ export function SignupPage() {
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(email, password, {
+    const { error, needsConfirmation } = await signUp(email, password, {
       first_name: firstName,
       last_name: lastName,
       org_name: orgName,
@@ -54,9 +55,49 @@ export function SignupPage() {
       return;
     }
 
+    if (needsConfirmation) {
+      setConfirmEmail(email);
+      return;
+    }
+
     toast.success("Account created! Welcome to Cre8Gre8.");
     navigate("/dashboard", { replace: true });
   };
+
+  const handleResend = async () => {
+    if (!confirmEmail) return;
+    const { error } = await resendConfirmation(confirmEmail);
+    if (error) {
+      toast.error("Could not resend email", { description: error });
+    } else {
+      toast.success("Confirmation email resent — check your inbox.");
+    }
+  };
+
+  if (confirmEmail) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-[#6C63FF]/10 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-8 h-8 text-[#6C63FF]" />
+          </div>
+          <h2 className="text-2xl font-semibold mb-2">Check your email</h2>
+          <p className="text-muted-foreground mb-6">
+            We sent a confirmation link to <strong>{confirmEmail}</strong>. Click it to activate your account.
+          </p>
+          <Button variant="outline" onClick={handleResend} className="mb-4 w-full">
+            Resend confirmation email
+          </Button>
+          <button
+            onClick={() => navigate("/")}
+            className="text-sm text-[#6C63FF] hover:underline"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
