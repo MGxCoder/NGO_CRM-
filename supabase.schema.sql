@@ -167,6 +167,7 @@ drop policy if exists "tenants are readable" on public.tenants;
 drop policy if exists "campaigns are readable" on public.campaigns;
 drop policy if exists "campaigns are insertable" on public.campaigns;
 drop policy if exists "campaigns are updatable" on public.campaigns;
+drop policy if exists "campaigns are deletable" on public.campaigns;
 drop policy if exists "registrations are readable" on public.campaign_registrations;
 drop policy if exists "registrations are insertable" on public.campaign_registrations;
 drop policy if exists "donations are readable" on public.campaign_donations;
@@ -189,41 +190,69 @@ drop policy if exists "crowdfunding updates are insertable" on public.crowdfundi
 drop policy if exists "crowdfunding comments are readable" on public.crowdfunding_comments;
 drop policy if exists "crowdfunding comments are insertable" on public.crowdfunding_comments;
 
-create policy "tenants are readable" on public.tenants for select to anon using (true);
+-- Policies cover both anon (public-facing forms) and authenticated (dashboard users)
+create policy "tenants are readable" on public.tenants
+  for select to anon, authenticated using (true);
 
-create policy "campaigns are readable" on public.campaigns for select to anon using (true);
-create policy "campaigns are insertable" on public.campaigns for insert to anon with check (true);
-create policy "campaigns are updatable" on public.campaigns for update to anon using (true) with check (true);
+create policy "campaigns are readable" on public.campaigns
+  for select to anon, authenticated using (true);
+create policy "campaigns are insertable" on public.campaigns
+  for insert to anon, authenticated with check (true);
+create policy "campaigns are updatable" on public.campaigns
+  for update to anon, authenticated using (true) with check (true);
+create policy "campaigns are deletable" on public.campaigns
+  for delete to anon, authenticated using (true);
 
-create policy "registrations are readable" on public.campaign_registrations for select to anon using (true);
-create policy "registrations are insertable" on public.campaign_registrations for insert to anon with check (true);
+create policy "registrations are readable" on public.campaign_registrations
+  for select to anon, authenticated using (true);
+create policy "registrations are insertable" on public.campaign_registrations
+  for insert to anon, authenticated with check (true);
 
-create policy "donations are readable" on public.campaign_donations for select to anon using (true);
-create policy "donations are insertable" on public.campaign_donations for insert to anon with check (true);
+create policy "donations are readable" on public.campaign_donations
+  for select to anon, authenticated using (true);
+create policy "donations are insertable" on public.campaign_donations
+  for insert to anon, authenticated with check (true);
 
-create policy "volunteers are readable" on public.campaign_volunteers for select to anon using (true);
-create policy "volunteers are insertable" on public.campaign_volunteers for insert to anon with check (true);
+create policy "volunteers are readable" on public.campaign_volunteers
+  for select to anon, authenticated using (true);
+create policy "volunteers are insertable" on public.campaign_volunteers
+  for insert to anon, authenticated with check (true);
 
-create policy "ai assets are readable" on public.campaign_ai_assets for select to anon using (true);
-create policy "ai assets are insertable" on public.campaign_ai_assets for insert to anon with check (true);
+create policy "ai assets are readable" on public.campaign_ai_assets
+  for select to anon, authenticated using (true);
+create policy "ai assets are insertable" on public.campaign_ai_assets
+  for insert to anon, authenticated with check (true);
 
-create policy "monthly giving is readable" on public.monthly_giving_subscriptions for select to anon using (true);
-create policy "monthly giving is insertable" on public.monthly_giving_subscriptions for insert to anon with check (true);
-create policy "monthly giving is updatable" on public.monthly_giving_subscriptions for update to anon using (true) with check (true);
+create policy "monthly giving is readable" on public.monthly_giving_subscriptions
+  for select to anon, authenticated using (true);
+create policy "monthly giving is insertable" on public.monthly_giving_subscriptions
+  for insert to anon, authenticated with check (true);
+create policy "monthly giving is updatable" on public.monthly_giving_subscriptions
+  for update to anon, authenticated using (true) with check (true);
 
-create policy "major gifts are readable" on public.major_gifts for select to anon using (true);
-create policy "major gifts are insertable" on public.major_gifts for insert to anon with check (true);
-create policy "major gifts are updatable" on public.major_gifts for update to anon using (true) with check (true);
+create policy "major gifts are readable" on public.major_gifts
+  for select to anon, authenticated using (true);
+create policy "major gifts are insertable" on public.major_gifts
+  for insert to anon, authenticated with check (true);
+create policy "major gifts are updatable" on public.major_gifts
+  for update to anon, authenticated using (true) with check (true);
 
-create policy "direct mail is readable" on public.direct_mail_campaigns for select to anon using (true);
-create policy "direct mail is insertable" on public.direct_mail_campaigns for insert to anon with check (true);
-create policy "direct mail is updatable" on public.direct_mail_campaigns for update to anon using (true) with check (true);
+create policy "direct mail is readable" on public.direct_mail_campaigns
+  for select to anon, authenticated using (true);
+create policy "direct mail is insertable" on public.direct_mail_campaigns
+  for insert to anon, authenticated with check (true);
+create policy "direct mail is updatable" on public.direct_mail_campaigns
+  for update to anon, authenticated using (true) with check (true);
 
-create policy "crowdfunding updates are readable" on public.crowdfunding_updates for select to anon using (true);
-create policy "crowdfunding updates are insertable" on public.crowdfunding_updates for insert to anon with check (true);
+create policy "crowdfunding updates are readable" on public.crowdfunding_updates
+  for select to anon, authenticated using (true);
+create policy "crowdfunding updates are insertable" on public.crowdfunding_updates
+  for insert to anon, authenticated with check (true);
 
-create policy "crowdfunding comments are readable" on public.crowdfunding_comments for select to anon using (true);
-create policy "crowdfunding comments are insertable" on public.crowdfunding_comments for insert to anon with check (true);
+create policy "crowdfunding comments are readable" on public.crowdfunding_comments
+  for select to anon, authenticated using (true);
+create policy "crowdfunding comments are insertable" on public.crowdfunding_comments
+  for insert to anon, authenticated with check (true);
 
 insert into public.campaigns (
   name,
