@@ -14,6 +14,7 @@ import { AIAssistant } from "./pages/AIAssistant";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
 import { CampaignManagement } from "./pages/CampaignManagement";
+import { DonationsManagement } from "./pages/DonationsManagement";
 import { CampaignLandingPage } from "./pages/CampaignLandingPage";
 import { EmailTemplates } from "./pages/EmailTemplates";
 
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
       { path: "reports", Component: AIReportGenerator },
       { path: "engagement", Component: EngagementCenter },
       { path: "campaigns", Component: CampaignManagement },
+      { path: "donations", Component: DonationsManagement },
       { path: "email-templates", Component: EmailTemplates },
       { path: "ai-assistant", Component: AIAssistant },
       { path: "analytics", Component: Analytics },

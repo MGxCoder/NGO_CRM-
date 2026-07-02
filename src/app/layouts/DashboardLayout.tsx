@@ -16,7 +16,6 @@ import {
   LayoutDashboard,
   Users,
   FileHeart,
-  FileText,
   MessageSquare,
   Megaphone,
   Bot,
@@ -32,6 +31,7 @@ import {
   Loader2,
   User,
   Mail,
+  Gift,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 
@@ -39,9 +39,9 @@ const navigation = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { name: "Donors", path: "/dashboard/donors", icon: Users },
   { name: "Impact Stories", path: "/dashboard/impact-stories", icon: FileHeart },
-  { name: "Reports", path: "/dashboard/reports", icon: FileText },
   { name: "Engagement", path: "/dashboard/engagement", icon: MessageSquare },
   { name: "Campaigns", path: "/dashboard/campaigns", icon: Megaphone },
+  { name: "Donations", path: "/dashboard/donations", icon: Gift },
   { name: "Email Templates", path: "/dashboard/email-templates", icon: Mail },
   { name: "AI Assistant", path: "/dashboard/ai-assistant", icon: Bot },
   { name: "Analytics", path: "/dashboard/analytics", icon: BarChart3 },

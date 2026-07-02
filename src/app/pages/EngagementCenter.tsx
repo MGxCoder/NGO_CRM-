@@ -59,7 +59,7 @@ export function EngagementCenter() {
           <h1 className="text-2xl font-semibold mb-1">Engagement Center</h1>
           <p className="text-muted-foreground">Manage donor engagement and automate communications</p>
         </div>
-        <Button onClick={() => navigate("/dashboard/campaigns?tab=direct-mail")} className="bg-[#6C63FF] hover:bg-[#5A52D5]">
+        <Button onClick={() => navigate("/dashboard/campaigns?tab=create")} className="bg-[#6C63FF] hover:bg-[#5A52D5]">
           <Plus className="w-4 h-4 mr-2" />
           Create Campaign
         </Button>

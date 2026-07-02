@@ -29,33 +29,17 @@ import {
 import {
   Calendar,
   CheckCircle2,
-  Clock,
-  CreditCard,
   DollarSign,
   Download,
-  Eye,
-  FileText,
   Filter,
   Gift,
   HandHeart,
-  Image,
-  Mail,
-  MapPin,
   Megaphone,
-  MessageSquare,
-  PauseCircle,
-  PlayCircle,
-  Plus,
-  QrCode,
-  Receipt,
+  MapPin,
   Search,
-  Send,
   Share2,
-  Sparkles,
   Ticket,
-  Timer,
   TrendingUp,
-  UserCheck,
   Users,
 } from "lucide-react";
 import { isSupabaseConfigured, supabase } from "../lib/supabase";
@@ -164,43 +148,7 @@ const fallbackCampaigns: Campaign[] = [
   },
 ];
 
-const monthlyDonors = [
-  { name: "Sarah Johnson", amount: 75, status: "Active", nextCharge: "2026-07-01", reminders: "On" },
-  { name: "Michael Chen", amount: 250, status: "Paused", nextCharge: "Paused", reminders: "On" },
-  { name: "Priya Shah", amount: 125, status: "Active", nextCharge: "2026-07-05", reminders: "Off" },
-];
-
-const majorGiftDonors = [
-  { name: "Avery Foundation", value: "$125,000", stage: "Proposal", nextStep: "Board lunch", lastGift: "$75,000" },
-  { name: "Daniel Brooks", value: "$50,000", stage: "Cultivation", nextStep: "Site visit", lastGift: "$20,000" },
-  { name: "Northstar Trust", value: "$250,000", stage: "Stewardship", nextStep: "Impact report", lastGift: "$250,000" },
-];
-
-const volunteerRoster = [
-  { name: "Lena Ortiz", skills: "Check-in, Photography", availability: "Weekends", event: "Run for Rural Classrooms", hours: 18 },
-  { name: "Noah Patel", skills: "Logistics, Driving", availability: "Evenings", event: "Clean Water Crowdfund", hours: 24 },
-  { name: "Grace Kim", skills: "Fundraising, Calls", availability: "Remote", event: "Annual Impact Appeal", hours: 31 },
-];
-
-const eventAgenda = [
-  { time: "08:00", title: "Check-in opens", speaker: "Volunteer Team" },
-  { time: "09:15", title: "Opening remarks", speaker: "Maya Lewis" },
-  { time: "10:00", title: "Community run begins", speaker: "Event Crew" },
-  { time: "12:30", title: "Live donation match", speaker: "Sponsor Panel" },
-];
-
-const comments = [
-  { name: "Emma", text: "Shared with my workplace giving circle." },
-  { name: "David", text: "Proud to support clean water access." },
-];
-
 const chartMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-const galleryImages = [
-  "https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?auto=format&fit=crop&w=700&q=80",
-  "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=700&q=80",
-  "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=700&q=80",
-];
-
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
@@ -250,10 +198,6 @@ export function CampaignManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationStatus, setRegistrationStatus] = useState("Ready for ticket sales and confirmations.");
-  const [donationStatus, setDonationStatus] = useState("Gateway ready for one-time or recurring gifts.");
-  const [receiptNumber, setReceiptNumber] = useState("");
-  const [emailCopy, setEmailCopy] = useState("Dear supporter,\n\nYour generosity creates measurable impact. Here is what your support made possible this month...");
 
   useEffect(() => {
     void loadCampaigns();
@@ -275,7 +219,7 @@ export function CampaignManagement() {
         .from("campaigns")
         .select("*")
         .order("created_at", { ascending: false });
-      
+
       if (error) {
         // Check if error is about missing table - if so, provide helpful guidance
         if (error.message.includes("schema cache") || error.message.includes("Could not find table")) {
@@ -384,13 +328,13 @@ export function CampaignManagement() {
     window.history.replaceState(null, "", `/dashboard/campaigns?tab=${tab}`);
   };
 
-  const addCampaign = async (event: React.FormEvent<HTMLFormElement>, forcedType?: string) => {
+  const addCampaign = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const payload = {
       tenant_id: tenantId,
       name: toText(form.get("campaignName")),
-      type: forcedType || toText(form.get("campaignType")) || "Fundraising Event",
+      type: toText(form.get("campaignType")) || "Fundraising Event",
       status: toText(form.get("campaignStatus")) || "Draft",
       goal_amount: toNumber(form.get("goalAmount")),
       banner_url: toText(form.get("banner")) || fallbackCampaigns[0].banner,
@@ -446,124 +390,11 @@ export function CampaignManagement() {
     setCampaigns((current) => [created, ...current]);
     setSelectedCampaign(created);
     event.currentTarget.reset();
-    setTab(forcedType === "Fundraising Event" ? "events" : "crowdfunding");
-  };
-
-  const saveRegistration = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const tickets = Math.max(1, Math.round(toNumber(form.get("tickets")) || 1));
-    const payload = {
-      tenant_id: tenantId,
-      campaign_id: selectedCampaign.id,
-      name: toText(form.get("registrationName")),
-      email: toText(form.get("registrationEmail")),
-      phone: toText(form.get("registrationPhone")),
-      tickets,
-      notes: toText(form.get("registrationNotes")),
-      confirmation_sent: true,
-    };
-    if (!payload.name || !payload.email) {
-      toast.error("Name and email are required.");
-      return;
-    }
-    if (supabase) {
-      const { error } = await supabase.from("campaign_registrations").insert(payload);
-      if (error) {
-        toast.error(`Registration failed: ${error.message}`);
-        return;
-      }
-    }
-    updateCampaign({ registrations: selectedCampaign.registrations + tickets });
-    setRegistrationStatus(`Registered ${payload.name}. Confirmation email queued and ${tickets} ticket(s) issued.`);
-    event.currentTarget.reset();
-    toast.success("Event registration saved.");
-  };
-
-  const saveDonation = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const amount = toNumber(form.get("amount"));
-    const receipt = `CRE8-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const payload = {
-      tenant_id: tenantId,
-      campaign_id: selectedCampaign.id,
-      donor_name: toText(form.get("donorName")),
-      donor_email: toText(form.get("donorEmail")),
-      amount,
-      payment_status: "paid",
-      receipt_number: receipt,
-      source: toText(form.get("paymentGateway")) || "Stripe",
-      donation_type: toText(form.get("donationType")) || "One-time",
-    };
-
-    if (!payload.donor_name || !payload.donor_email || !amount) {
-      toast.error("Donor name, email, and amount are required.");
-      return;
-    }
-    if (supabase) {
-      const { error } = await supabase.from("campaign_donations").insert(payload);
-      if (error) {
-        toast.error(`Donation failed: ${error.message}`);
-        return;
-      }
-      await supabase
-        .from("campaigns")
-        .update({ amount_raised: selectedCampaign.raised + amount })
-        .eq("tenant_id", tenantId)
-        .eq("id", selectedCampaign.id);
-    }
-    updateCampaign({ raised: selectedCampaign.raised + amount });
-    setReceiptNumber(receipt);
-    setDonationStatus(`${payload.donation_type} donation processed through ${payload.source}. Tax receipt ${receipt} generated.`);
-    event.currentTarget.reset();
-    toast.success("Donation saved and receipt generated.");
-  };
-
-  const saveVolunteer = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    const form = event ? new FormData(event.currentTarget) : null;
-    const payload = {
-      tenant_id: tenantId,
-      campaign_id: selectedCampaign.id,
-      name: toText(form?.get("volunteerName") || "Website volunteer"),
-      email: toText(form?.get("volunteerEmail") || "volunteer@cre8gre8.org"),
-      phone: toText(form?.get("volunteerPhone") || ""),
-      notes: `Skills: ${toText(form?.get("skills") || "General")} | Availability: ${toText(form?.get("availability") || "Flexible")}`,
-    };
-    if (supabase) {
-      const { error } = await supabase.from("campaign_volunteers").insert(payload);
-      if (error) {
-        toast.error(`Volunteer signup failed: ${error.message}`);
-        return;
-      }
-    }
-    updateCampaign({ volunteers: selectedCampaign.volunteers + 1 });
-    event?.currentTarget.reset();
-    toast.success("Volunteer signup saved and assigned to event.");
-  };
-
-  const updateCampaign = (patch: Partial<Campaign>) => {
-    setSelectedCampaign((current) => {
-      const updated = { ...current, ...patch };
-      setCampaigns((items) => items.map((campaign) => (campaign.id === updated.id ? updated : campaign)));
-      return updated;
-    });
+    setTab("overview");
   };
 
   const getLandingPageUrl = (campaign: Campaign) =>
     `${window.location.origin}/campaign/${campaign.id}`;
-
-  const shareCampaign = async () => {
-    const url = getLandingPageUrl(selectedCampaign);
-    const text = `${selectedCampaign.name}: ${selectedCampaign.description}`;
-    if (navigator.share) {
-      await navigator.share({ title: selectedCampaign.name, text, url });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success("Landing page link copied to clipboard.");
-    }
-  };
 
   const openLandingPage = (campaign: Campaign) => {
     window.open(getLandingPageUrl(campaign), "_blank");
@@ -593,19 +424,12 @@ export function CampaignManagement() {
     toast.success("Fundraising report exported.");
   };
 
-  const generateEmail = () => {
-    setEmailCopy(
-      `Subject: ${selectedCampaign.name} needs your leadership\n\nDear supporter,\n\nWe are ${selectedProgress}% toward our ${formatCurrency(selectedCampaign.goal)} goal. Your gift today helps Cre8Gre8 move from campaign promise to measurable impact.\n\nWith gratitude,\nThe Cre8Gre8 Team`,
-    );
-    toast.success("AI email draft generated in Direct Mail.");
-  };
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-2xl font-semibold mb-1">Fundraising Platform</h1>
-          <p className="text-muted-foreground">Annual appeals, monthly giving, crowdfunding, events, major gifts, volunteers, and direct mail.</p>
+          <p className="text-muted-foreground">Track campaign performance, launch new campaigns, and analyze fundraising results.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => loadCampaigns()} disabled={isLoading}>
@@ -613,7 +437,7 @@ export function CampaignManagement() {
             Refresh
           </Button>
           <Button onClick={() => setTab("create")} className="bg-[#6C63FF] hover:bg-[#5A52D5]">
-            <Plus className="w-4 h-4 mr-2" />
+            <Megaphone className="w-4 h-4 mr-2" />
             Create Campaign
           </Button>
         </div>
@@ -630,15 +454,7 @@ export function CampaignManagement() {
       <Tabs value={activeTab} onValueChange={setTab} className="space-y-6">
         <TabsList className="flex-wrap h-auto justify-start">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="create">Create</TabsTrigger>
-          <TabsTrigger value="appeals">Annual Appeals</TabsTrigger>
-          <TabsTrigger value="monthly">Monthly Giving</TabsTrigger>
-          <TabsTrigger value="crowdfunding">Crowdfunding</TabsTrigger>
-          <TabsTrigger value="donations">Online Donations</TabsTrigger>
-          <TabsTrigger value="events">Events</TabsTrigger>
-          <TabsTrigger value="major-gifts">Major Gifts</TabsTrigger>
-          <TabsTrigger value="volunteers">Volunteers</TabsTrigger>
-          <TabsTrigger value="direct-mail">Direct Mail</TabsTrigger>
+          <TabsTrigger value="create">Create Campaign</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -688,7 +504,7 @@ export function CampaignManagement() {
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-4">
               {filteredCampaigns.map((campaign) => (
-                <CampaignCard key={campaign.id} campaign={campaign} selected={campaign.id === selectedCampaign.id} onSelect={() => setSelectedCampaign(campaign)} onPreview={() => setTab(campaign.type === "Fundraising Event" ? "events" : "crowdfunding")} onLandingPage={() => openLandingPage(campaign)} />
+                <CampaignCard key={campaign.id} campaign={campaign} selected={campaign.id === selectedCampaign.id} onSelect={() => setSelectedCampaign(campaign)} onLandingPage={() => openLandingPage(campaign)} />
               ))}
             </div>
             <SelectedCampaignPanel campaign={selectedCampaign} progress={selectedProgress} />
@@ -697,217 +513,6 @@ export function CampaignManagement() {
 
         <TabsContent value="create">
           <CampaignForm onSubmit={(event) => addCampaign(event)} />
-        </TabsContent>
-
-        <TabsContent value="appeals" className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-6">
-            <CampaignForm title="Create Annual Appeal" forcedType="Annual Appeal" onSubmit={(event) => addCampaign(event, "Annual Appeal")} />
-            <ModuleCard title="Email Campaign Integration">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <ActionTile icon={Mail} title="Segment" text="Lapsed, active, major, first-time donors" onClick={() => toast.success("Donor segments synced to email campaign.")} />
-                <ActionTile icon={Calendar} title="Schedule" text="Start/end windows and timezone sending" onClick={() => toast.success("Appeal schedule saved.")} />
-                <ActionTile icon={TrendingUp} title="Track" text="Open rate, click rate, revenue attribution" onClick={() => setTab("analytics")} />
-              </div>
-            </ModuleCard>
-          </div>
-          <ModuleCard title="Annual Appeal Pipeline">
-            {campaigns.filter((campaign) => campaign.type === "Annual Appeal").map((campaign) => (
-              <ProgressRow key={campaign.id} label={campaign.name} value={campaign.raised} goal={campaign.goal} />
-            ))}
-          </ModuleCard>
-        </TabsContent>
-
-        <TabsContent value="monthly" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <MetricCard title="Recurring Revenue" value="$18,420" detail="Monthly projected" icon={Gift} />
-            <MetricCard title="Active Plans" value="286" detail="Donor subscriptions" icon={CheckCircle2} />
-            <MetricCard title="Paused Plans" value="14" detail="Resume campaigns ready" icon={PauseCircle} />
-            <MetricCard title="Auto Reminders" value="96%" detail="Payment reminders enabled" icon={Clock} />
-          </div>
-          <Card className="border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Donor Subscription Dashboard</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              {monthlyDonors.map((donor) => (
-                <div key={donor.name} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center rounded-lg border p-4">
-                  <div className="font-medium">{donor.name}</div>
-                  <div>{formatCurrency(donor.amount)}/mo</div>
-                  <Badge className={donor.status === "Active" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>{donor.status}</Badge>
-                  <div className="text-sm text-muted-foreground">{donor.nextCharge}</div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => toast.success(`${donor.name} subscription ${donor.status === "Active" ? "paused" : "resumed"}.`)}>
-                      {donor.status === "Active" ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => toast.success("Reminder preference updated.")}>Reminder</Button>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="crowdfunding" className="space-y-6">
-          <PublicPagePreview campaign={selectedCampaign} progress={selectedProgress} onDonate={() => setTab("donations")} onShare={shareCampaign} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ModuleCard title="Comments">
-              {comments.map((comment) => (
-                <div key={comment.name} className="rounded-lg border p-3 mb-3">
-                  <p className="font-medium">{comment.name}</p>
-                  <p className="text-sm text-muted-foreground">{comment.text}</p>
-                </div>
-              ))}
-              <Button variant="outline" onClick={() => toast.success("Comment added to campaign page.")}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Add Comment
-              </Button>
-            </ModuleCard>
-            <ModuleCard title="Updates">
-              <Textarea placeholder="Post a campaign update for supporters..." className="bg-input-background min-h-[120px]" />
-              <Button className="mt-3 bg-[#6C63FF] hover:bg-[#5A52D5]" onClick={() => toast.success("Crowdfunding update published.")}>Publish Update</Button>
-            </ModuleCard>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="donations">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <form onSubmit={saveDonation} className="lg:col-span-2">
-              <Card className="border-border/50 shadow-sm">
-                <CardHeader><CardTitle>Online Donations</CardTitle></CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Field id="donorName" label="Donor Name" placeholder="Priya Shah" required />
-                    <Field id="donorEmail" label="Email" type="email" placeholder="priya@email.com" required />
-                    <Field id="amount" label="Amount" placeholder="$250" required />
-                    <SelectField id="donationType" label="Donation Type" defaultValue="One-time" items={["One-time", "Recurring monthly", "Recurring quarterly"]} />
-                    <SelectField id="paymentGateway" label="Payment Gateway" defaultValue="Stripe" items={["Stripe", "PayPal", "Razorpay", "Offline pledge"]} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    {["Payment", "Success Page", "Save Donor", "Tax Receipt"].map((step, index) => <StepCard key={step} step={step} index={index} />)}
-                  </div>
-                  <Button className="bg-[#6C63FF] hover:bg-[#5A52D5]"><CreditCard className="w-4 h-4 mr-2" />Process Donation</Button>
-                </CardContent>
-              </Card>
-            </form>
-            <StatusCard icon={Receipt} title={receiptNumber ? "Receipt Generated" : "Donation Status"} text={donationStatus} />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="events" className="space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 space-y-6">
-              <CampaignForm title="Create Event" forcedType="Fundraising Event" onSubmit={(event) => addCampaign(event, "Fundraising Event")} />
-              <EventLanding campaign={selectedCampaign} progress={selectedProgress} onRegister={() => setTab("events")} onDonate={() => setTab("donations")} onVolunteer={() => void saveVolunteer()} />
-              <form onSubmit={saveRegistration}>
-                <ModuleCard title="Event Registration & Ticket Management">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Field id="registrationName" label="Name" placeholder="Alex Morgan" required />
-                    <Field id="registrationEmail" label="Email" type="email" placeholder="alex@email.com" required />
-                    <Field id="registrationPhone" label="Phone" placeholder="+1 (555) 123-4567" />
-                    <Field id="tickets" label="Tickets" type="number" placeholder="2" />
-                  </div>
-                  <Textarea id="registrationNotes" name="registrationNotes" className="bg-input-background mt-4" placeholder="Dietary, accessibility, or seating notes." />
-                  <Button className="mt-4 bg-[#6C63FF] hover:bg-[#5A52D5]"><Ticket className="w-4 h-4 mr-2" />Issue Tickets</Button>
-                </ModuleCard>
-              </form>
-            </div>
-            <div className="space-y-6">
-              <StatusCard icon={Ticket} title="Registration Status" text={registrationStatus} />
-              <ModuleCard title="QR Code Check-in">
-                <div className="aspect-square rounded-lg border bg-gray-50 flex items-center justify-center">
-                  <QrCode className="w-28 h-28 text-[#6C63FF]" />
-                </div>
-                <Button className="w-full mt-3" variant="outline" onClick={() => toast.success("QR check-in scanned and attendee marked present.")}>Scan Check-in</Button>
-              </ModuleCard>
-              <ModuleCard title="Live Donation Tracker">
-                <p className="text-3xl font-semibold">{formatCurrency(selectedCampaign.raised)}</p>
-                <Progress value={selectedProgress} className="my-3" />
-                <Button className="w-full bg-[#6C63FF] hover:bg-[#5A52D5]" onClick={() => setTab("donations")}>Donation During Event</Button>
-              </ModuleCard>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="major-gifts" className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 space-y-4">
-            {majorGiftDonors.map((donor) => (
-              <Card key={donor.name} className="border-border/50 shadow-sm">
-                <CardContent className="p-5">
-                  <div className="flex flex-wrap justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">{donor.name}</h3>
-                      <p className="text-sm text-muted-foreground">Profile, timeline, meetings, follow-ups, and donation history</p>
-                    </div>
-                    <Badge className="bg-blue-100 text-blue-800">{donor.stage}</Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <MiniStat label="Capacity" value={donor.value} />
-                    <MiniStat label="Last Gift" value={donor.lastGift} />
-                    <MiniStat label="Next Follow-up" value={donor.nextStep} />
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Button size="sm" variant="outline" onClick={() => toast.success("Meeting logged to relationship timeline.")}>Log Meeting</Button>
-                    <Button size="sm" variant="outline" onClick={() => toast.success("Follow-up task created.")}>Add Follow-up</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <ModuleCard title="Relationship Timeline">
-            {["Intro call", "Program briefing", "Proposal sent", "Board lunch scheduled"].map((item) => (
-              <div key={item} className="border-l-2 border-[#6C63FF] pl-3 pb-4 text-sm">{item}</div>
-            ))}
-          </ModuleCard>
-        </TabsContent>
-
-        <TabsContent value="volunteers" className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <form onSubmit={saveVolunteer}>
-            <ModuleCard title="Volunteer Registration">
-              <Field id="volunteerName" label="Name" placeholder="Lena Ortiz" required />
-              <Field id="volunteerEmail" label="Email" type="email" placeholder="lena@email.com" required />
-              <Field id="volunteerPhone" label="Phone" placeholder="+1 (555) 123-4567" />
-              <Field id="skills" label="Skills" placeholder="Check-in, photography, logistics" />
-              <Field id="availability" label="Availability" placeholder="Weekends, evenings, remote" />
-              <Button className="mt-4 bg-[#6C63FF] hover:bg-[#5A52D5]"><HandHeart className="w-4 h-4 mr-2" />Assign Volunteer</Button>
-            </ModuleCard>
-          </form>
-          <Card className="xl:col-span-2 border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Volunteer Hours & Assignments</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {volunteerRoster.map((volunteer) => (
-                <div key={volunteer.name} className="grid grid-cols-1 md:grid-cols-5 gap-3 rounded-lg border p-4 text-sm">
-                  <span className="font-medium">{volunteer.name}</span>
-                  <span>{volunteer.skills}</span>
-                  <span>{volunteer.availability}</span>
-                  <span>{volunteer.event}</span>
-                  <span className="font-medium">{volunteer.hours} hrs</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="direct-mail" className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <ModuleCard title="Templates & Segmentation">
-            <SelectField id="template" label="Template" defaultValue="Monthly Impact" items={["Monthly Impact", "Annual Appeal", "Event Invite", "Major Gift Follow-up"]} />
-            <SelectField id="segment" label="Donor Segment" defaultValue="All Active Donors" items={["All Active Donors", "Lapsed Donors", "Major Donors", "Monthly Donors"]} />
-            <Field id="schedule" label="Schedule" type="datetime-local" />
-            <Button className="mt-4 bg-[#6C63FF] hover:bg-[#5A52D5]" onClick={() => toast.success("Email campaign scheduled.")}><Send className="w-4 h-4 mr-2" />Schedule Campaign</Button>
-          </ModuleCard>
-          <Card className="xl:col-span-2 border-border/50 shadow-sm">
-            <CardHeader><CardTitle>Email Writing</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea value={emailCopy} onChange={(event) => setEmailCopy(event.target.value)} className="min-h-[260px] bg-input-background" />
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={generateEmail} className="bg-[#6C63FF] hover:bg-[#5A52D5]"><Sparkles className="w-4 h-4 mr-2" />Write Email</Button>
-                <Button variant="outline" onClick={() => toast.success("Preview opened for email campaign.")}><Eye className="w-4 h-4 mr-2" />Preview</Button>
-                <Button variant="outline" onClick={() => toast.success("Test email sent.")}><Mail className="w-4 h-4 mr-2" />Send Test</Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <MetricCard title="Open Rate" value="42.8%" detail="Last 30 days" icon={Mail} />
-                <MetricCard title="Click Rate" value="11.6%" detail="Last 30 days" icon={UserCheck} />
-                <MetricCard title="Revenue" value="$38,240" detail="Attributed gifts" icon={DollarSign} />
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-6">
@@ -973,15 +578,15 @@ export function CampaignManagement() {
   );
 }
 
-function CampaignForm({ title = "Create Campaign", forcedType, onSubmit }: { title?: string; forcedType?: string; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void }) {
+function CampaignForm({ title = "Create Campaign", onSubmit }: { title?: string; onSubmit: (event: React.FormEvent<HTMLFormElement>) => void }) {
   return (
     <form onSubmit={onSubmit}>
       <Card className="border-border/50 shadow-sm">
         <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field id="campaignName" label={forcedType === "Fundraising Event" ? "Event Name" : "Campaign Name"} placeholder={forcedType || "2026 Annual Impact Appeal"} required />
-            {forcedType ? <input type="hidden" name="campaignType" value={forcedType} /> : <SelectField id="campaignType" label="Type" defaultValue="Annual Appeal" items={["Annual Appeal", "Fundraising Event", "Crowdfunding", "Online Donation"]} />}
+            <Field id="campaignName" label="Campaign Name" placeholder="2026 Annual Impact Appeal" required />
+            <SelectField id="campaignType" label="Type" defaultValue="Annual Appeal" items={["Annual Appeal", "Fundraising Event", "Crowdfunding", "Online Donation"]} />
             <SelectField id="campaignStatus" label="Status" defaultValue="Draft" items={["Draft", "Scheduled", "Live", "Completed"]} />
             <Field id="goalAmount" label="Target Amount" placeholder="$250,000" required />
             <Field id="eventDate" label="Start Date" type="date" />
@@ -1001,7 +606,7 @@ function CampaignForm({ title = "Create Campaign", forcedType, onSubmit }: { tit
   );
 }
 
-function CampaignCard({ campaign, selected, onSelect, onPreview, onLandingPage }: { campaign: Campaign; selected: boolean; onSelect: () => void; onPreview: () => void; onLandingPage?: () => void }) {
+function CampaignCard({ campaign, selected, onSelect, onLandingPage }: { campaign: Campaign; selected: boolean; onSelect: () => void; onLandingPage?: () => void }) {
   const progress = Math.min(100, Math.round((campaign.raised / Math.max(campaign.goal, 1)) * 100));
   return (
     <Card className={`border-border/50 shadow-sm cursor-pointer transition-shadow hover:shadow-md ${selected ? "ring-2 ring-[#6C63FF]/30" : ""}`} onClick={onSelect}>
@@ -1018,7 +623,6 @@ function CampaignCard({ campaign, selected, onSelect, onPreview, onLandingPage }
                 <p className="text-sm text-muted-foreground">{campaign.type} by {campaign.organizer}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onPreview(); }}><Eye className="w-4 h-4 mr-2" />Open</Button>
                 {onLandingPage && (
                   <Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onLandingPage(); }}>
                     <Share2 className="w-4 h-4 mr-2" />Landing Page
@@ -1062,82 +666,6 @@ function SelectedCampaignPanel({ campaign, progress }: { campaign: Campaign; pro
         <InfoRow icon={MapPin} label="Location" value={campaign.location} />
         <InfoRow icon={Users} label="Organizer" value={campaign.organizer} />
       </CardContent>
-    </Card>
-  );
-}
-
-function PublicPagePreview({ campaign, progress, onDonate, onShare }: { campaign: Campaign; progress: number; onDonate: () => void; onShare: () => void }) {
-  return (
-    <Card className="border-border/50 shadow-sm overflow-hidden">
-      <div className="min-h-[360px] bg-cover bg-center flex items-end" style={{ backgroundImage: `linear-gradient(180deg, rgba(17,24,39,0.15), rgba(17,24,39,0.78)), url(${campaign.banner})` }}>
-        <div className="p-8 text-white max-w-3xl">
-          <Badge className="bg-white/20 text-white mb-4">{campaign.type}</Badge>
-          <h2 className="text-4xl font-semibold mb-3">{campaign.name}</h2>
-          <p className="text-white/85 mb-5">{campaign.description}</p>
-          <div className="flex flex-wrap gap-3">
-            <Button className="bg-[#6C63FF] hover:bg-[#5A52D5]" onClick={onDonate}>Donate Now</Button>
-            <Button variant="outline" className="border-white/50 text-white hover:bg-white/10" onClick={onShare}><Share2 className="w-4 h-4 mr-2" />Share</Button>
-          </div>
-        </div>
-      </div>
-      <CardContent className="p-6 space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <SectionTitle icon={FileText} title="Campaign Story" />
-            <p className="text-muted-foreground mt-3">{campaign.description}</p>
-          </div>
-          <div className="rounded-lg border p-4">
-            <SectionTitle icon={DollarSign} title="Goal Progress" />
-            <p className="text-2xl font-semibold mt-3">{formatCurrency(campaign.raised)}</p>
-            <p className="text-sm text-muted-foreground mb-3">raised of {formatCurrency(campaign.goal)}</p>
-            <Progress value={progress} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {galleryImages.map((image) => <img key={image} src={image} alt="" className="h-44 w-full rounded-lg object-cover" />)}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function EventLanding({ campaign, progress, onRegister, onDonate, onVolunteer }: { campaign: Campaign; progress: number; onRegister: () => void; onDonate: () => void; onVolunteer: () => void }) {
-  return (
-    <ModuleCard title="Event Landing Page">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <img src={campaign.banner} alt="" className="h-64 w-full rounded-lg object-cover" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <LandingPanel icon={Timer} title="Countdown Timer" text="53 days 04 hours" />
-            <LandingPanel icon={Image} title="Sponsor Section" text="Northstar Health, Blue River Foods" />
-            <LandingPanel icon={PlayCircle} title="Gallery" text="Photos and video highlights" />
-          </div>
-          <ModuleCard title="Agenda & Speakers">
-            {eventAgenda.map((item) => (
-              <div key={item.time} className="grid grid-cols-3 gap-3 rounded-lg border p-3 mb-2 text-sm">
-                <span className="font-medium">{item.time}</span>
-                <span>{item.title}</span>
-                <span className="text-muted-foreground">{item.speaker}</span>
-              </div>
-            ))}
-          </ModuleCard>
-        </div>
-        <div className="space-y-4">
-          <ProgressRow label="Live donations" value={campaign.raised} goal={campaign.goal} />
-          <Button className="w-full bg-[#6C63FF] hover:bg-[#5A52D5]" onClick={onRegister}>Register for Event</Button>
-          <Button className="w-full" variant="outline" onClick={onDonate}>Donate During Event</Button>
-          <Button className="w-full" variant="outline" onClick={onVolunteer}>Volunteer Signup</Button>
-        </div>
-      </div>
-    </ModuleCard>
-  );
-}
-
-function ModuleCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card className="border-border/50 shadow-sm">
-      <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
-      <CardContent>{children}</CardContent>
     </Card>
   );
 }
@@ -1186,31 +714,6 @@ function SelectField({ id, label, defaultValue, items }: { id: string; label: st
       </Select>
     </div>
   );
-}
-
-function SectionTitle({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
-  return <div className="flex items-center gap-2"><Icon className="w-5 h-5 text-[#6C63FF]" /><h3 className="font-semibold">{title}</h3></div>;
-}
-
-function LandingPanel({ icon, title, text }: { icon: React.ElementType; title: string; text: string }) {
-  return <div className="rounded-lg border p-4"><SectionTitle icon={icon} title={title} /><p className="text-sm text-muted-foreground mt-3">{text}</p></div>;
-}
-
-function ActionTile({ icon: Icon, title, text, onClick }: { icon: React.ElementType; title: string; text: string; onClick: () => void }) {
-  return <button onClick={onClick} className="text-left rounded-lg border p-4 hover:border-[#6C63FF] hover:bg-[#6C63FF]/5"><Icon className="w-5 h-5 text-[#6C63FF] mb-3" /><p className="font-medium">{title}</p><p className="text-sm text-muted-foreground">{text}</p></button>;
-}
-
-function ProgressRow({ label, value, goal }: { label: string; value: number; goal: number }) {
-  const progress = Math.min(100, Math.round((value / Math.max(goal, 1)) * 100));
-  return <div className="mb-4"><div className="flex justify-between text-sm mb-2"><span className="font-medium">{label}</span><span>{formatCurrency(value)} / {formatCurrency(goal)}</span></div><Progress value={progress} /></div>;
-}
-
-function StepCard({ step, index }: { step: string; index: number }) {
-  return <div className="rounded-lg border p-4 text-sm"><div className="w-8 h-8 rounded-full bg-[#6C63FF]/10 text-[#6C63FF] flex items-center justify-center mb-3">{index + 1}</div><p className="font-medium">{step}</p></div>;
-}
-
-function StatusCard({ icon: Icon, title, text }: { icon: React.ElementType; title: string; text: string }) {
-  return <Card className="border-border/50 shadow-sm"><CardContent className="p-6"><div className="w-12 h-12 rounded-xl bg-[#6C63FF]/10 flex items-center justify-center mb-4"><Icon className="w-6 h-6 text-[#6C63FF]" /></div><h3 className="font-semibold mb-2">{title}</h3><p className="text-sm text-muted-foreground">{text}</p></CardContent></Card>;
 }
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
